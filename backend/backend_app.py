@@ -1,3 +1,4 @@
+"""Serve a RESTful API"""
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
@@ -13,10 +14,12 @@ def bad_requests(error):
     """Return a custom 400 error."""
     return jsonify(error), 400
 
+
 @app.errorhandler(404)
 def not_found(error):
     """Return a custom 404 error."""
     return jsonify(error), 404
+
 
 @app.route('/api/posts', methods=['GET', 'POST'])
 def get_posts():
@@ -49,8 +52,28 @@ def get_posts():
 
         return jsonify(new_posts), 201
 
-    # GET request returns the posts list
-    return jsonify(POSTS)
+    # GET request returns a sorted posts list
+    # sorted by id ASC by default
+    sort = request.args.get('sort')
+    direction = request.args.get('direction')
+    allowed_sorts = {'title', 'content'}
+    allowed_directions = {'asc', 'desc'}
+
+    # Return original Posts list if
+    # one or both allowed params are missing
+    if sort is None and direction is None:
+        return jsonify(POSTS)
+
+    # Return custom BadRequest for not allowed values
+    if str(sort) not in allowed_sorts:
+        return f'Sorting by {sort} is not allowed', 400
+
+    if str(direction) not in allowed_directions:
+        return f'Direction {direction} is not allowed', 400
+
+    # Returns a new list sorted via query params
+    sorted_posts = sorted(POSTS, key=lambda x: x[sort], reverse=direction == 'desc')
+    return jsonify(sorted_posts)
 
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PUT'])
