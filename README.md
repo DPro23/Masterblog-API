@@ -1,2 +1,3 @@
 # Masterblog-API
-# API for Masterblog. Python + Flask
+API for Masterblog. Python + Flask.
+MIT Program
