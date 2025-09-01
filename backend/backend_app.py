@@ -22,13 +22,12 @@ def not_found(error):
 def get_posts():
     """GET returns all posts, POST add a new one."""
     if request.method == 'POST':
-        body = request.get_json()
-
-        # Check for missing fields
         try:
-            # Check for empty values
+            body = request.get_json()
+
+            # Check for empty fields
             for field, value in body.items():
-                if value.strip() == "":
+                if str(value).strip() == "":
                     raise ValueError(f"Required '{field}' is empty.")
 
             # New Post ready to add with AutoIncrementing ID
@@ -41,12 +40,12 @@ def get_posts():
             # Adds new post to the posts list
             POSTS.append(new_posts)
 
-        # Handle missing fields or empty values
+        # Handle missing or empty fields
         except KeyError as key_error:
             return f'Missing field: {key_error}', 400
 
         except ValueError as value_error:
-            return f'Invalid field: {value_error}', 400
+            return f'Empty field: {value_error}', 400
 
         return jsonify(new_posts), 201
 
@@ -54,15 +53,30 @@ def get_posts():
     return jsonify(POSTS)
 
 
-@app.route('/api/posts/<int:post_id>', methods=['DELETE'])
+@app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PUT'])
 def delete_post(post_id):
-    """Delete a post by its id"""
+    """DELETE or UPDATE a post by its id"""
     for post in POSTS:
         if post["id"] == post_id:
-            POSTS.remove(post)
-            success_msg = f"Post with id {post_id} has been deleted successfully."
-            return jsonify({"message": success_msg}), 200
+            if request.method == "DELETE":
+                POSTS.remove(post)
+                success_msg = f"Post with id {post_id} has been deleted successfully."
 
+                # Deleted successfully
+                return jsonify({"message": success_msg}), 200
+
+            elif request.method == "PUT":
+                body = request.get_json()
+
+                for field in body.keys():
+                    if field == 'content' or field == 'title':
+                        if str(body[field]).strip() != "":
+                            post[field] = str(body[field])
+
+                # Updated successfully
+                return jsonify(post), 200
+
+    # If post_id is not found in posts list
     return f"Post with id {post_id} was not found.", 404
 
 
