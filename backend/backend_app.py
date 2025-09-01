@@ -80,5 +80,24 @@ def delete_post(post_id):
     return f"Post with id {post_id} was not found.", 404
 
 
+@app.route('/api/posts/search')
+def search_post():
+    """Returns all post matching the research"""
+    title = request.args.get('title')
+    content = request.args.get('content')
+    unique_filtered_posts = {}
+
+    # Use idx to avoid duplicated
+    for idx, post in enumerate(POSTS):
+        if title is not None and str(title).lower() in post["title"].lower():
+            unique_filtered_posts[idx] = post
+        if content is not None and str(content).lower() in post["content"].lower():
+            unique_filtered_posts[idx] = post
+
+    # Create a list of unique posts from a dictionary
+    filtered_posts = list(unique_filtered_posts.values())
+    return jsonify(filtered_posts), 200
+
+
 if __name__ == '__main__':
     app.run(host="0.0.0.0", port=5002, debug=True)
