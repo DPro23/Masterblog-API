@@ -4,7 +4,6 @@
     "title": "Masterblog API",
     "version": "1.0.0"
   },
-  "servers": [{ "url": "http://localhost:5001" }],
   "tags": [{ "name": "Post", "description": "Post API - CRUD" }],
   "paths": {
     "/api/posts": {
@@ -16,6 +15,44 @@
           "200": {
             "description": "Successful operation"
           }
+        }
+      },
+      "post": {
+        "summary": "Returns the new created post",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["Post"],
+        "parameters": [
+            {
+              "name": "New post",
+              "in": "body",
+              "description": "title and contents of the new post",
+              "required": true,
+              "schema": {
+                "$ref": "#/definitions/CreatePost"
+              }
+            }
+          ],
+        "responses": {
+          "201": {
+            "description": "New post created"
+          },
+          "400": {
+            "description": "Invalid request"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "CreatePost": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
         }
       }
     }
