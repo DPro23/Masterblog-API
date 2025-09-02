@@ -3,20 +3,20 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 
-SWAGGER_URL="/api/docs"  # (1) swagger endpoint e.g. HTTP://localhost:5002/api/docs
-API_URL="/static/masterblog.json" # (2) ensure you create this dir and file
+SWAGGER_URL="/api/docs"  # swagger endpoint e.g. HTTP://localhost:5002/api/docs
+API_URL="/static/masterblog.json" # API Schema
 
 swagger_ui_blueprint = get_swaggerui_blueprint(
     SWAGGER_URL,
     API_URL,
     config={
-        'app_name': 'Masterblog API' # (3) You can change this if you like
+        'app_name': 'Masterblog API' # Swagger API Name
     }
 )
 
-app = Flask(__name__)
-app.json.sort_keys = False # Avoid sorting keys a-z
-CORS(app)  # This will enable CORS for all routes
+app = Flask(__name__) # Instantiate flask app
+app.json.sort_keys = False # Enable custom sorting
+CORS(app)  # Enable CORS for all routes
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL) # Create Swagger UI
 
 POSTS = []
@@ -35,7 +35,7 @@ def not_found(error):
 
 
 @app.route('/api/posts', methods=['GET', 'POST'])
-def get_posts():
+def read_or_add_posts():
     """GET returns all posts, POST add a new one."""
     if request.method == 'POST':
         try:
@@ -90,7 +90,7 @@ def get_posts():
 
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PUT'])
-def delete_post(post_id):
+def delete_or_update_post(post_id):
     """DELETE or UPDATE a post by its id"""
     for post in POSTS:
         if post["id"] == post_id:
