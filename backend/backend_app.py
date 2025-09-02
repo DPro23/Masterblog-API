@@ -2,7 +2,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
-from OnMasterblog.main import get_posts, add_post, delete_post
+from OnMasterblog.main import get_posts, add_post, delete_post, update_post
 
 SWAGGER_URL="/api/docs"  # swagger endpoint e.g. HTTP://localhost:5002/api/docs
 API_URL="/static/masterblog.json" # API Schema
@@ -105,6 +105,7 @@ def delete_or_update_post(post_id):
         posts = get_posts()
         for post in posts:
             if post["id"] == post_id:
+                # Delete post
                 if request.method == "DELETE":
                     delete_post(post)
                     success_msg = f"Post with id {post_id} has been deleted successfully."
@@ -112,6 +113,7 @@ def delete_or_update_post(post_id):
                     # Deleted successfully
                     return jsonify({"message": success_msg}), 200
 
+                # Update post
                 elif request.method == "PUT":
                     body = request.get_json()
 
@@ -120,6 +122,7 @@ def delete_or_update_post(post_id):
                             if str(body[field]).strip() != "":
                                 post[field] = str(body[field])
 
+                    update_post(post)
                     # Updated successfully
                     return jsonify(post), 200
 

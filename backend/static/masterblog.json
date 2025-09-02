@@ -80,16 +80,13 @@
               "type": "integer"
             },
             {
-            "name": "title",
-            "in": "query",
-            "type": "string",
-            "description": "Update Post's title"
-            },
-            {
-              "name": "content",
-              "in": "query",
-              "type": "string",
-              "description": "Update Post's content"
+              "name": "Updated Post",
+              "in": "body",
+              "description": "Updated Post.",
+              "required": true,
+              "schema": {
+                "$ref": "#/definitions/Post"
+              }
             }
           ],
         "responses": {
