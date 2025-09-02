@@ -1,25 +1,25 @@
-"""Serve a RESTful API"""
+"""Serve a RESTful API + Swagger UI."""
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
+from OnMasterblog.main import get_posts, add_post, delete_post
 
 SWAGGER_URL="/api/docs"  # swagger endpoint e.g. HTTP://localhost:5002/api/docs
 API_URL="/static/masterblog.json" # API Schema
 
+# Define swagger UI
 swagger_ui_blueprint = get_swaggerui_blueprint(
     SWAGGER_URL,
     API_URL,
     config={
-        'app_name': 'Masterblog API' # Swagger API Name
+        'app_name': 'Masterblog API'
     }
 )
 
 app = Flask(__name__) # Instantiate flask app
 app.json.sort_keys = False # Enable custom sorting
-CORS(app)  # Enable CORS for all routes
 app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL) # Create Swagger UI
-
-POSTS = []
+CORS(app)  # Enable CORS for all routes
 
 
 @app.errorhandler(400)
@@ -39,22 +39,27 @@ def read_or_add_posts():
     """GET returns all posts, POST add a new one."""
     if request.method == 'POST':
         try:
+            posts = get_posts()
             body = request.get_json()
 
             # Check for empty fields
             for field, value in body.items():
-                if str(value).strip() == "":
-                    raise ValueError(f"Required '{field}' is empty.")
+                if field == 'title' or field == 'content':
+                    if str(value).strip() == "":
+                        raise ValueError(f"Required '{field}' is empty.")
+                else:
+                    raise KeyError(f"Required '{field}' is missing.")
 
             # New Post ready to add with AutoIncrementing ID
             new_posts = {
-                "id": POSTS[-1]["id"] + 1 if len(POSTS) > 0 else 1,
+                "id": posts[-1]["id"] + 1 if len(posts) > 0 else 1,
                 "title": str(body["title"]),
                 "content": str(body["content"])
             }
 
             # Adds new post to the posts list
-            POSTS.append(new_posts)
+            add_post(new_posts)
+            #posts.append(new_posts) # with mocked data
 
         # Handle missing or empty fields
         except KeyError as key_error:
@@ -67,6 +72,7 @@ def read_or_add_posts():
 
     # GET request returns a sorted posts list
     # sorted by id ASC by default
+    posts = get_posts()
     sort = request.args.get('sort')
     direction = request.args.get('direction')
     allowed_sorts = {'title', 'content'}
@@ -75,7 +81,7 @@ def read_or_add_posts():
     # Return original Posts list if
     # one or both allowed params are missing
     if sort is None and direction is None:
-        return jsonify(POSTS)
+        return jsonify(posts)
 
     # Return custom BadRequest for not allowed values
     if str(sort) not in allowed_sorts:
@@ -85,54 +91,64 @@ def read_or_add_posts():
         return f'Direction {direction} is not allowed', 400
 
     # Returns a new list sorted via query params
-    sorted_posts = sorted(POSTS, key=lambda x: x[sort], reverse=direction == 'desc')
+    sorted_posts = sorted(posts, key=lambda x: x[sort], reverse=direction == 'desc')
     return jsonify(sorted_posts)
 
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PUT'])
 def delete_or_update_post(post_id):
     """DELETE or UPDATE a post by its id"""
-    for post in POSTS:
-        if post["id"] == post_id:
-            if request.method == "DELETE":
-                POSTS.remove(post)
-                success_msg = f"Post with id {post_id} has been deleted successfully."
+    try:
+        posts = get_posts()
+        for post in posts:
+            if post["id"] == post_id:
+                if request.method == "DELETE":
+                    delete_post(post)
+                    success_msg = f"Post with id {post_id} has been deleted successfully."
 
-                # Deleted successfully
-                return jsonify({"message": success_msg}), 200
+                    # Deleted successfully
+                    return jsonify({"message": success_msg}), 200
 
-            elif request.method == "PUT":
-                body = request.get_json()
+                elif request.method == "PUT":
+                    body = request.get_json()
 
-                for field in body.keys():
-                    if field == 'content' or field == 'title':
-                        if str(body[field]).strip() != "":
-                            post[field] = str(body[field])
+                    for field in body.keys():
+                        if field == 'content' or field == 'title':
+                            if str(body[field]).strip() != "":
+                                post[field] = str(body[field])
 
-                # Updated successfully
-                return jsonify(post), 200
+                    # Updated successfully
+                    return jsonify(post), 200
 
-    # If post_id is not found in posts list
-    return f"Post with id {post_id} was not found.", 404
+        # when there isn't any post with id == post_id
+        return f"Post with id {post_id} was not found.", 404
+
+    except Exception as error:
+        return f"An error occurred: {error}", 500
 
 
 @app.route('/api/posts/search')
 def search_post():
     """Returns all post matching the research"""
-    title = request.args.get('title')
-    content = request.args.get('content')
-    unique_filtered_posts = {}
+    try:
+        posts = get_posts()
+        title = request.args.get('title')
+        content = request.args.get('content')
+        unique_filtered_posts = {}
 
-    # Use idx to avoid duplicated
-    for idx, post in enumerate(POSTS):
-        if title is not None and str(title).lower() in post["title"].lower():
-            unique_filtered_posts[idx] = post
-        if content is not None and str(content).lower() in post["content"].lower():
-            unique_filtered_posts[idx] = post
+        # Use idx to avoid duplicated
+        for idx, post in enumerate(posts):
+            if title is not None and str(title).lower() in post["title"].lower():
+                unique_filtered_posts[idx] = post
+            if content is not None and str(content).lower() in post["content"].lower():
+                unique_filtered_posts[idx] = post
 
-    # Create a list of unique posts from a dictionary
-    filtered_posts = list(unique_filtered_posts.values())
-    return jsonify(filtered_posts), 200
+        # Create a list of unique posts from a dictionary
+        filtered_posts = list(unique_filtered_posts.values())
+        return jsonify(filtered_posts), 200
+
+    except Exception as error:
+        return f"An error occurred: {error}", 500
 
 
 if __name__ == '__main__':
