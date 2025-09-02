@@ -37,8 +37,8 @@ def not_found(error):
 @app.route('/api/posts', methods=['GET', 'POST'])
 def read_or_add_posts():
     """GET returns all posts, POST add a new one."""
-    if request.method == 'POST':
-        try:
+    try:
+        if request.method == 'POST':
             posts = get_posts()
             body = request.get_json()
 
@@ -61,38 +61,41 @@ def read_or_add_posts():
             add_post(new_posts)
             #posts.append(new_posts) # with mocked data
 
-        # Handle missing or empty fields
-        except KeyError as key_error:
-            return f'Missing field: {key_error}', 400
+            return jsonify(new_posts), 201
 
-        except ValueError as value_error:
-            return f'Empty field: {value_error}', 400
+        # GET request returns a sorted posts list
+        # sorted by id ASC by default
+        posts = get_posts()
+        sort = request.args.get('sort')
+        direction = request.args.get('direction')
+        allowed_sorts = {'title', 'content'}
+        allowed_directions = {'asc', 'desc'}
 
-        return jsonify(new_posts), 201
+        # Return original Posts list if
+        # one or both allowed params are missing
+        if sort is None and direction is None:
+            return jsonify(posts)
 
-    # GET request returns a sorted posts list
-    # sorted by id ASC by default
-    posts = get_posts()
-    sort = request.args.get('sort')
-    direction = request.args.get('direction')
-    allowed_sorts = {'title', 'content'}
-    allowed_directions = {'asc', 'desc'}
+        # Return custom BadRequest for not allowed values
+        if str(sort) not in allowed_sorts:
+            return f'Sorting by {sort} is not allowed', 400
 
-    # Return original Posts list if
-    # one or both allowed params are missing
-    if sort is None and direction is None:
-        return jsonify(posts)
+        if str(direction) not in allowed_directions:
+            return f'Direction {direction} is not allowed', 400
 
-    # Return custom BadRequest for not allowed values
-    if str(sort) not in allowed_sorts:
-        return f'Sorting by {sort} is not allowed', 400
+        # Returns a new list sorted via query params
+        sorted_posts = sorted(posts, key=lambda x: x[sort], reverse=direction == 'desc')
+        return jsonify(sorted_posts)
 
-    if str(direction) not in allowed_directions:
-        return f'Direction {direction} is not allowed', 400
+    # Handle missing or empty fields
+    except KeyError as key_error:
+        return f'Missing field: {key_error}', 400
 
-    # Returns a new list sorted via query params
-    sorted_posts = sorted(posts, key=lambda x: x[sort], reverse=direction == 'desc')
-    return jsonify(sorted_posts)
+    except ValueError as value_error:
+        return f'Empty field: {value_error}', 400
+
+    except Exception as error:
+        return f'Something went wrong: {error}', 500
 
 
 @app.route('/api/posts/<int:post_id>', methods=['DELETE', 'PUT'])
